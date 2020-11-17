@@ -25,9 +25,9 @@ UserSchema.methods.toJSON = function() {
     return _.omit(userObject, ['password'])
 }
 
-UserSchema.methods.generateJsonWebToken = function() {
-    const user = this
-    return new Promise((resolve, reject) => {
+UserSchema.methods.generateJsonWebToken = async function() {
+    return jwt.sign({_id: this._id.toHexString()}, process.env.SECRET, {expiresIn: "15m"});
+/*     return new Promise((resolve, reject) => {
         jwt.sign({_id: user._id.toHexString()}, process.env.SECRET, {expiresIn: "15m"}, (err, token) => {
             if (!err) {
                 return resolve(token)
@@ -35,8 +35,36 @@ UserSchema.methods.generateJsonWebToken = function() {
                 return reject(err)
             }
         })
+    }) */
+}
+
+UserSchema.statics.findByCredentials = function(email, password) {
+    const user = this
+    return user.findOne({email}).then(user => {
+        if (!user) return Promise.reject()
+        return new Promise((resolve, reject) => {
+            bcrypt.compare(password, user.password, (err, res) => {
+                if (res) resolve(user)
+                else reject(err)
+            })
+        })
     })
 }
+
+UserSchema.pre('save', function(next) {
+    const user = this
+    const costFactor = 10
+    if (user.isModified('password')) {
+        bcrypt.genSalt(costFactor, (err, salt) => {
+            bcrypt.hash(user.password, salt, (err, hash) => {
+                user.password = hash
+                next()
+            })
+        })
+    } else {
+        next()
+    }
+})
 
 const User = mongoose.model('User', UserSchema)
 
