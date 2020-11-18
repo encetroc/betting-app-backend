@@ -43,31 +43,22 @@ app.post('/users', async (req, res) => {
     await user.save()
     const accessToken = await user.generateJsonWebToken()
     res.header('access-token', accessToken).send(user)
-/*     user.save().then(() => {
-        return user.generateJsonWebToken().then((accessToken) => {
-            return accessToken
-        })
-    }).then((accessToken) => {
-        res.header('access-token', accessToken)
-            .send(user)
-    }).catch(err => res.status('400').send({ message: 'no signup' })) */
 })
 
 /**
  * POST /users/login
  * Purpose: authenticate a user
  */
-app.post('/users/login', (req, res) => {
-    const email = req.body.email
-    const password = req.body.password
-    User.findByCredentials(email, password).then(user => {
-        return user.generateJsonWebToken().then(accessToken => {
-            return accessToken
-        }).then(accessToken => {
-            res.header('access-token', accessToken)
-                .send(user)
-        })
-    }).catch(err => res.status('400').send(err))
+app.post('/users/login', async (req, res) => {
+    try {
+        const email = req.body.email
+        const password = req.body.password
+        const user = await User.findByCredentials(email, password)
+        const accessToken = await user.generateJsonWebToken()
+        res.header('access-token', accessToken).send(user)
+    } catch (error) {
+        res.status(404).send(error)
+    }
 })
 
 app.listen('3000', console.log("api is up"))
